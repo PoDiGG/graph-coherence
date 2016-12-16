@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+'use strict';
+
+const N3 = require('n3');
+const fs = require('fs');
+const _ = require('lodash');
+
+const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+var triples = fs.createReadStream(process.argv[2]).pipe(N3.StreamParser()); // TODO: param
+var store = N3.Store();
+console.error("Loading dataset...");
+triples.on('data', (triple) => {
+  store.addTriple(triple);
+});
+triples.on('end', () => {
+  console.log(calculateCoherence(store)); // TODO
+});
+
+function calculateCoherence(dataset) {
+  // Precalculate system of the dataset
+  console.error('Precalculating dataset system...');
+  var types = calculateTypes(dataset); // T'
+  var typeInstances = calculateTypeInstances(dataset, types); // (I(T,D)
+  var typeProperties = calculateTypeProperties(dataset, typeInstances); // (P(T)
+  var totalTypePropertyInstanceWeight = calculateTotalTypePropertyInstanceWeight();
+
+  // Calculate the actual coherence of the dataset wrt the system.
+  console.error('Calculating coherence...');
+  return coherence();
+
+  function weightedSumCoverage(type) { // WC(CV(T,D))
+    return (typeProperties[type].length + typeInstances[type].length) / totalTypePropertyInstanceWeight;
+  }
+
+  function propertyOccurencesInInstances(property, type) {  // OC(p,I(T,D))
+    return typeInstances[type].reduce((acc, subject) => acc + !!dataset.find(subject, property, null).length, 0);
+  }
+
+  function coverage(type) { // CV(T,D)
+    var sum = typeProperties[type].reduce((acc, typeProperty) => acc + propertyOccurencesInInstances(typeProperty, type), 0);
+    return sum / (typeProperties[type].length * typeInstances[type].length);
+  }
+
+  function coherence() { // CH(T',D)
+    return types.reduce((acc, type) => acc + (weightedSumCoverage(type) * coverage(type)), 0);
+  }
+
+  function calculateTypes() {
+    return _.uniq(dataset.find(null, RDF_TYPE, null).map((triple) => triple.object));
+  }
+
+  function calculateTypeInstances() {
+    return types.reduce((data, type) => {
+      data[type] = _.uniq(dataset.find(null, RDF_TYPE, type).map((triple) => triple.subject));
+      return data;
+    }, {});
+  }
+
+  function calculateTypeProperties() {
+    var data = {};
+    for(var type in typeInstances) {
+      var subjects = typeInstances[type];
+      data[type] = _.uniq(_.flatten(subjects.map((subject) => dataset.find(subject, null, null)
+          .map((triple) => triple.predicate))));
+    }
+    return data;
+  }
+
+  function calculateTotalTypePropertyInstanceWeight() {
+    return types.reduce((acc, type) => acc + typeProperties[type].length + typeInstances[type].length, 0);
+  }
+}
