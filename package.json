@@ -9,6 +9,13 @@
   "bin": {
     "graph-coherence": "./bin/graph-coherence"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/PoDiGG/graph-coherence.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PoDiGG/graph-coherence/issues"
+  },
   "keywords": [
     "coherence",
     "coverage",
