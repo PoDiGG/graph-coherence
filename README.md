@@ -20,3 +20,9 @@ graph-coherence [path to my RDF dataset]
 ```
 
 This will return a number from 0 to 1 on stdout, with 1 being the maximum coherence.
+
+# License
+The PoDiGG generator is written by [Ruben Taelman](http://rubensworks.net/).
+
+This code is copyrighted by [Ghent University – imec](http://idlab.ugent.be/)
+and released under the [MIT license](http://opensource.org/licenses/MIT).
